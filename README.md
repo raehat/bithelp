@@ -24,6 +24,8 @@ Every AP2 project has exactly four agents with **different roles**. They **commu
 3. **Authorization** (Credentials Provider Agent) — User approves or rejects using payment credentials (Unisat).
 4. **Settlement** (Merchant Payment Processor Agent) — User signs and sends via Unisat (payment made over x402); Processor returns signed SettlementResult.
 5. **Receipt** — Auditable record tying intent → cart → authorization → settlement.
+   
+<img width="959" height="553" alt="Screenshot 2026-02-14 at 7 36 36 AM" src="https://github.com/user-attachments/assets/37923ab8-f88b-4d3b-8365-c43eb5a112bf" />
 
 ## Run locally
 

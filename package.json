@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "description": "Agent Payment Protocol (AP2) — intent → authorization → settlement with Bitcoin (local node)",
+  "description": "Agent Payment Protocol (AP2) — intent → authorization → settlement with Bitcoin (Unisat)",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "qrcode.react": "^4.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.0"

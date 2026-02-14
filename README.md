@@ -1,6 +1,6 @@
 # AP2 — Agent Payment Protocol
 
-Frontend for the **Agent Payment Protocol** with the **four canonical AP2 components**. Users can "buy anything" with prompts; payment is settled on-chain via x402 (local Bitcoin node in this demo).
+Frontend for the **Agent Payment Protocol** with the **four canonical AP2 components**. Users describe what to buy in plain language; the Shopping Agent suggests exact details (and the Merchant finds a matching order when possible). Payment is settled on-chain via **Unisat Wallet** — no local Bitcoin node required.
 
 ## The 4 AP2 components
 
@@ -17,10 +17,10 @@ Every AP2 project has exactly four agents with **different roles**. They **commu
 
 ## Flow
 
-1. **Intent** (Shopping Agent) — User describes what to pay for (prompt), amount, recipient.
-2. **Cart** (Merchant Agent) — Returns a signed CartMandate for the request.
-3. **Authorization** (Credentials Provider Agent) — User approves or rejects using payment credentials.
-4. **Settlement** (Merchant Payment Processor Agent) — Executes payment via x402 (local Bitcoin node here; mock by default).
+1. **Intent** (Shopping Agent) — User types what they want (e.g. "2 coffees for Alice"). Agent suggests exact details (summary, amount, recipient); user can refine or confirm.
+2. **Cart** (Merchant Agent) — Returns a signed CartMandate, matching an order when possible.
+3. **Authorization** (Credentials Provider Agent) — User approves or rejects using payment credentials (Unisat).
+4. **Settlement** (Merchant Payment Processor Agent) — User signs and sends via Unisat; Processor returns signed SettlementResult.
 5. **Receipt** — Auditable record tying intent → cart → authorization → settlement.
 
 ## Run locally
@@ -32,16 +32,11 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
-## Bitcoin: local node vs mock
+## Bitcoin: Unisat Wallet
 
-- **Default:** Mock mode (no real node). Payments are simulated; no network calls.
-- **Real local node:** Run Bitcoin Core (e.g. regtest) on `127.0.0.1:8332`. In `src/main.tsx` set:
-
-  ```ts
-  ;(window as any).__AP2_MOCK_BTC__ = false
-  ```
-
-  The Vite dev server proxies `/btc` to `http://127.0.0.1:8332` for JSON-RPC (`sendtoaddress`, etc.).
+- **No local node.** Install the [Unisat Wallet](https://unisat.io) browser extension.
+- **Wallets:** Connect Unisat on the Wallets page (Credentials Provider). That address is used for approvals.
+- **Settlement:** On the Settlement step, Unisat will prompt you to sign and send the payment. The Processor records the txid and returns a signed result.
 
 ## Reusable pattern
 

@@ -14,8 +14,38 @@
 
 .subtitle {
   color: var(--muted);
-  margin: 0 0 2rem;
+  margin: 0 0 1.5rem;
   font-size: 0.95rem;
+}
+
+.comms {
+  background: rgba(240, 185, 11, 0.08);
+  border: 1px solid rgba(240, 185, 11, 0.3);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.commRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.agent {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.arrow {
+  color: var(--muted);
+}
+
+.commMsg {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .card {

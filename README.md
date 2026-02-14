@@ -4,14 +4,16 @@ Frontend for the **Agent Payment Protocol** with the **four canonical AP2 compon
 
 ## The 4 AP2 components
 
-Every AP2 project has exactly four agents:
+Every AP2 project has exactly four agents with **different roles**. They **communicate securely with each other** via signed messages (they do not share in-memory state).
 
 | Component | Role |
 |-----------|------|
-| **Shopping Agent** | Main orchestrator; handles user requests |
-| **Merchant Agent** | Handles product queries; creates signed **CartMandates** |
-| **Credentials Provider Agent** | Holds user's payment credentials (wallets); facilitates payment |
-| **Merchant Payment Processor Agent** | Settles payment on-chain via **x402** |
+| **Shopping Agent** | Orchestrator only; talks to user and to the other three agents. Does NOT hold credentials, create cart, or settle. |
+| **Merchant Agent** | Accepts CartRequest from Shopping; returns **signed CartMandate**. Does NOT see credentials or execute payment. |
+| **Credentials Provider Agent** | Holds payment credentials (wallets). Accepts ApprovalRequest; returns **signed PaymentAuthorization**. Does NOT create cart or settle. |
+| **Merchant Payment Processor Agent** | Accepts SettlementRequest (with auth signature); settles on-chain via **x402**; returns **signed SettlementResult**. Does NOT hold credentials. |
+
+**Secure communication:** Each cross-agent message is signed by the sender so the receiver can verify origin (e.g. Merchant signs CartMandate, Credentials Provider signs authorization, Processor signs settlement result).
 
 ## Flow
 

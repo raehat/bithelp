@@ -10,7 +10,7 @@ export function AgentsPage() {
     <div className={styles.page}>
       <h1 className={styles.title}>AP2 has 4 components</h1>
       <p className={styles.subtitle}>
-        Every AP2 project uses these four agents. Copy this pattern for your own implementation.
+        Four distinct agents with different roles. They communicate securely with each other via signed messages — they do not share in-memory state.
       </p>
 
       <ul className={styles.list}>
@@ -20,18 +20,16 @@ export function AgentsPage() {
             <div className={styles.body}>
               <h2 className={styles.name}>{agent.name}</h2>
               <p className={styles.role}>{agent.role}</p>
+              <p className={styles.interface}>{agent.interface}</p>
             </div>
           </li>
         ))}
       </ul>
 
       <div className={styles.flow}>
-        <h3>How they work together</h3>
+        <h3>Secure communication</h3>
         <p>
-          <strong>Shopping Agent</strong> handles the user request (prompt) and orchestrates the flow.
-          It asks the <strong>Merchant Agent</strong> for product/cart details; the Merchant returns a signed <strong>CartMandate</strong>.
-          The <strong>Credentials Provider Agent</strong> holds the user’s payment credentials (wallets) and facilitates approval.
-          The <strong>Merchant Payment Processor Agent</strong> settles the payment on-chain via <strong>x402</strong>.
+          <strong>Shopping Agent</strong> orchestrates only: it sends requests to the other three and receives <strong>signed</strong> responses. <strong>Merchant Agent</strong> accepts CartRequest and returns a <strong>signed CartMandate</strong>. <strong>Credentials Provider Agent</strong> accepts ApprovalRequest and returns a <strong>signed PaymentAuthorization</strong>. <strong>Merchant Payment Processor Agent</strong> accepts SettlementRequest (with auth signature) and returns a <strong>signed SettlementResult</strong> (e.g. txid via x402). Each agent signs so the others can verify who sent the message.
         </p>
       </div>
 

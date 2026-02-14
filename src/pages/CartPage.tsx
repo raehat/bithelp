@@ -1,51 +1,40 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFlow } from '@/context/FlowContext'
-import { createId } from '@/lib/id'
-import { AP2_AGENT_IDS } from '@/types/ap2'
-import type { CartMandate } from '@/types/ap2'
+import { shoppingAgentRequestCart } from '@/agents/shopping-agent'
+import type { SignedCartMandate } from '@/types/ap2'
 import styles from './CartPage.module.css'
 
 /**
- * Merchant Agent returns a signed CartMandate for the intent.
- * In a full implementation this would be a call to the Merchant Agent; here we derive it from the intent.
+ * Shopping Agent → Merchant Agent (secure): request CartMandate.
+ * Merchant Agent returns a SIGNED CartMandate so Shopping Agent can verify it came from Merchant.
  */
 export function CartPage() {
   const navigate = useNavigate()
-  const { intent, setCartMandate } = useFlow()
+  const { intent, setCartMandate, setStep } = useFlow()
+  const [status, setStatus] = useState<'idle' | 'requesting' | 'done'>('idle')
+  const [mandate, setMandate] = useState<SignedCartMandate | null>(null)
 
   useEffect(() => {
     if (!intent) {
+      setStep('intent')
       navigate('/intent', { replace: true })
       return
     }
-  }, [intent, navigate])
-
-  const acceptCart = () => {
-    if (!intent) return
-    const now = new Date()
-    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000).toISOString()
-    const mandate: CartMandate = {
-      id: createId('cart'),
-      merchantId: 'merchant-demo',
-      merchantName: 'Demo Merchant',
-      createdAt: now.toISOString(),
-      expiresAt,
-      items: [
-        {
-          id: createId('item'),
-          name: intent.summary,
-          quantity: 1,
-          unitAmountBtc: intent.amountBtc,
-          totalBtc: intent.amountBtc,
-        },
-      ],
-      totalBtc: intent.amountBtc,
-      signature: 'mock-sig-merchant',
-      createdBy: AP2_AGENT_IDS.MERCHANT_AGENT,
+    if (status === 'idle') {
+      setStatus('requesting')
+      shoppingAgentRequestCart(intent).then((signedMandate) => {
+        setMandate(signedMandate)
+        setStatus('done')
+      })
     }
-    setCartMandate(mandate)
-    navigate('/authorize')
+  }, [intent, status, navigate, setStep])
+
+  const continueToApproval = () => {
+    if (mandate) {
+      setCartMandate(mandate)
+      navigate('/authorize')
+    }
   }
 
   if (!intent) return null
@@ -54,33 +43,59 @@ export function CartPage() {
     <div className={styles.page}>
       <h1 className={styles.title}>Cart mandate</h1>
       <p className={styles.subtitle}>
-        <strong>Merchant Agent</strong> has returned a signed CartMandate for your request. Review and continue to payment approval.
+        <strong>Secure communication:</strong> Shopping Agent requested a CartMandate from Merchant Agent. Merchant Agent does not see your credentials or execute payment — it only creates and signs the cart.
       </p>
 
-      <div className={styles.card}>
-        <div className={styles.merchant}>
-          {intent.cartMandate?.merchantName ?? 'Demo Merchant'} · CartMandate
+      {status === 'requesting' && (
+        <div className={styles.comms}>
+          <div className={styles.commRow}>
+            <span className={styles.agent}>Shopping Agent</span>
+            <span className={styles.arrow}>→</span>
+            <span className={styles.agent}>Merchant Agent</span>
+          </div>
+          <p className={styles.commMsg}>Requesting signed CartMandate…</p>
         </div>
-        <div className={styles.row}>
-          <span className={styles.label}>Summary</span>
-          <span className={styles.value}>{intent.summary}</span>
-        </div>
-        <div className={styles.row}>
-          <span className={styles.label}>Amount</span>
-          <span className={`${styles.value} ${styles.mono}`}>{intent.amountBtc} BTC</span>
-        </div>
-        <div className={styles.row}>
-          <span className={styles.label}>Recipient</span>
-          <span className={`${styles.value} ${styles.mono}`}>{intent.recipient}</span>
-        </div>
-        <div className={styles.meta}>
-          Created by Merchant Agent · Ready for Credentials Provider (approval)
-        </div>
-      </div>
+      )}
 
-      <button type="button" className={styles.continue} onClick={acceptCart}>
-        Continue to approval (Credentials Provider)
-      </button>
+      {status === 'done' && mandate && (
+        <>
+          <div className={styles.comms}>
+            <div className={styles.commRow}>
+              <span className={styles.agent}>Merchant Agent</span>
+              <span className={styles.arrow}>→</span>
+              <span className={styles.agent}>Shopping Agent</span>
+            </div>
+            <p className={styles.commMsg}>Signed CartMandate received. Signature verifies origin.</p>
+          </div>
+          <div className={styles.card}>
+            <div className={styles.merchant}>
+              {mandate.merchantName} · CartMandate · signed by {mandate.signedBy}
+            </div>
+            <div className={styles.row}>
+              <span className={styles.label}>Summary</span>
+              <span className={styles.value}>{intent.summary}</span>
+            </div>
+            <div className={styles.row}>
+              <span className={styles.label}>Amount</span>
+              <span className={`${styles.value} ${styles.mono}`}>{mandate.totalBtc} BTC</span>
+            </div>
+            <div className={styles.row}>
+              <span className={styles.label}>Recipient</span>
+              <span className={`${styles.value} ${styles.mono}`}>{intent.recipient}</span>
+            </div>
+            <div className={styles.sig}>
+              <span className={styles.label}>Merchant signature</span>
+              <code className={styles.signature}>{mandate.signature.slice(0, 48)}…</code>
+            </div>
+            <div className={styles.meta}>
+              Next: Shopping Agent will send this to Credentials Provider Agent for your approval (wallet).
+            </div>
+          </div>
+          <button type="button" className={styles.continue} onClick={continueToApproval}>
+            Continue — request approval from Credentials Provider Agent
+          </button>
+        </>
+      )}
     </div>
   )
 }

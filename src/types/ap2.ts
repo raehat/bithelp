@@ -1,19 +1,20 @@
 /**
  * AP2 — Agent Payment Protocol
  *
- * Every AP2 project has exactly 4 components (agents):
+ * Four distinct agents with different roles. They do NOT share in-memory state;
+ * they communicate securely with each other via signed messages.
  *
- * 1. Shopping Agent       — Main orchestrator; handles user requests
- * 2. Merchant Agent       — Handles product queries; creates signed CartMandates
- * 3. Credentials Provider Agent — Holds user's payment credentials (wallets); facilitates payment
- * 4. Merchant Payment Processor Agent — Settles payment on-chain via x402
+ * 1. Shopping Agent       — Orchestrator; talks to user and to the other three agents
+ * 2. Merchant Agent       — Product/cart; returns SIGNED CartMandates (only it can create these)
+ * 3. Credentials Provider Agent — Holds payment credentials; returns SIGNED approval (only it can authorize)
+ * 4. Merchant Payment Processor Agent — Settles on-chain via x402; returns SIGNED settlement proof
  *
- * Flow: Intent (Shopping) → CartMandate (Merchant) → Authorization (Credentials Provider) → Settlement (Processor via x402) → Receipt
+ * Security: Every cross-agent message is signed by the sending agent so the receiver can verify origin.
  */
 
 export type Step = 'intent' | 'cart' | 'authorization' | 'settlement' | 'receipt'
 
-// ─── Four AP2 agents (canonical) ───────────────────────────────────────────
+// ─── Agent identity (each agent has its own id; used in signatures) ─────────
 
 export const AP2_AGENT_IDS = {
   SHOPPING_AGENT: 'shopping-agent',
@@ -28,16 +29,38 @@ export interface AP2Agent {
   id: AP2AgentId
   name: 'Shopping Agent' | 'Merchant Agent' | 'Credentials Provider Agent' | 'Merchant Payment Processor Agent'
   role: string
+  /** What this agent can do; what it accepts and returns when others communicate with it. */
+  interface: string
 }
 
 export const AP2_AGENTS: AP2Agent[] = [
-  { id: AP2_AGENT_IDS.SHOPPING_AGENT, name: 'Shopping Agent', role: 'Main orchestrator; handles user requests' },
-  { id: AP2_AGENT_IDS.MERCHANT_AGENT, name: 'Merchant Agent', role: 'Handles product queries; creates signed CartMandates' },
-  { id: AP2_AGENT_IDS.CREDENTIALS_PROVIDER_AGENT, name: 'Credentials Provider Agent', role: "Holds user's payment credentials (wallets); facilitates payment" },
-  { id: AP2_AGENT_IDS.MERCHANT_PAYMENT_PROCESSOR_AGENT, name: 'Merchant Payment Processor Agent', role: 'Settles payment on-chain via x402' },
+  {
+    id: AP2_AGENT_IDS.SHOPPING_AGENT,
+    name: 'Shopping Agent',
+    role: 'Main orchestrator; handles user requests',
+    interface: 'Receives user prompt → calls Merchant (cart), Credentials Provider (approval), Processor (settlement). Does NOT hold credentials or settle.',
+  },
+  {
+    id: AP2_AGENT_IDS.MERCHANT_AGENT,
+    name: 'Merchant Agent',
+    role: 'Handles product queries; creates signed CartMandates',
+    interface: 'Accepts CartRequest from Shopping Agent. Returns SIGNED CartMandate. Does NOT see credentials or execute payment.',
+  },
+  {
+    id: AP2_AGENT_IDS.CREDENTIALS_PROVIDER_AGENT,
+    name: 'Credentials Provider Agent',
+    role: "Holds user's payment credentials (wallets); facilitates payment",
+    interface: 'Accepts ApprovalRequest (intent + cart) from Shopping Agent. Returns SIGNED PaymentAuthorization. Does NOT create cart or settle.',
+  },
+  {
+    id: AP2_AGENT_IDS.MERCHANT_PAYMENT_PROCESSOR_AGENT,
+    name: 'Merchant Payment Processor Agent',
+    role: 'Settles payment on-chain via x402',
+    interface: 'Accepts SettlementRequest (intent + cart + authorization) from Shopping Agent. Returns SIGNED SettlementResult. Does NOT hold credentials.',
+  },
 ]
 
-// ─── CartMandate (from Merchant Agent) ──────────────────────────────────────
+// ─── Secure message: Cart (Shopping → Merchant → Shopping) ───────────────────
 
 export interface CartItem {
   id: string
@@ -47,58 +70,133 @@ export interface CartItem {
   totalBtc: string
 }
 
-/** Signed by Merchant Agent; represents an agreed cart and total. */
-export interface CartMandate {
-  id: string
-  merchantId: string
-  merchantName: string
-  createdAt: string // ISO
-  expiresAt: string // ISO
-  items: CartItem[]
-  totalBtc: string
-  /** Signature / proof from Merchant Agent. */
-  signature?: string
-  /** Who created this mandate (Merchant Agent). */
-  createdBy: AP2AgentId
-}
-
-// ─── Intent (Shopping Agent) ────────────────────────────────────────────────
-
-/** Step 1: What the user wants (orchestrated by Shopping Agent). */
-export interface PaymentIntent {
-  id: string
-  createdAt: string
-  /** Natural language prompt from user. */
+/** Shopping Agent sends this to Merchant Agent to request a cart. */
+export interface CartRequest {
+  requestId: string
+  from: AP2AgentId
+  intentId: string
   prompt: string
   summary: string
   amountBtc: string
   recipient: string
   memo?: string
-  /** Shopping Agent orchestrates. */
-  createdBy: AP2AgentId
-  /** Filled after Shopping Agent gets CartMandate from Merchant Agent. */
-  cartMandate?: CartMandate | null
+  timestamp: string
 }
 
-// ─── Authorization (Credentials Provider Agent) ──────────────────────────────
+/** Merchant Agent returns this to Shopping Agent. MUST be signed by Merchant so Shopping can verify. */
+export interface SignedCartMandate {
+  id: string
+  requestId: string
+  merchantId: string
+  merchantName: string
+  createdAt: string
+  expiresAt: string
+  items: CartItem[]
+  totalBtc: string
+  /** Merchant Agent signs this payload so Shopping Agent can verify it came from Merchant. */
+  signedBy: AP2AgentId
+  signature: string
+  /** Payload that was signed (e.g. hash or canonical JSON). */
+  signaturePayload?: string
+}
 
-/** Step 2: User approval using credentials (Credentials Provider Agent). */
+// ─── Legacy CartMandate (same shape but with signature required for cross-agent use) ─
+
+export type CartMandate = SignedCartMandate
+
+// ─── Secure message: Approval (Shopping → Credentials Provider → Shopping) ───
+
+/** Shopping Agent sends this to Credentials Provider to request user approval. */
+export interface ApprovalRequest {
+  requestId: string
+  from: AP2AgentId
+  intentId: string
+  cartMandateId: string
+  totalBtc: string
+  recipient: string
+  timestamp: string
+}
+
+/** Credentials Provider returns this to Shopping Agent. MUST be signed so Shopping can verify. */
+export interface SignedPaymentAuthorization {
+  id: string
+  requestId: string
+  intentId: string
+  createdAt: string
+  authorizedBy: string
+  status: 'approved' | 'rejected'
+  reason?: string
+  /** Credentials Provider signs so Shopping Agent can verify it came from Credentials Provider. */
+  signedBy: AP2AgentId
+  signature: string
+  signaturePayload?: string
+}
+
+// ─── Legacy Authorization (alias for signed version) ──────────────────────────
+
 export interface Authorization {
   id: string
   intentId: string
   createdAt: string
-  /** Credentials Provider Agent facilitates; "user" is the principal. */
   authorizedBy: string
   status: 'approved' | 'rejected'
   reason?: string
   proof?: string
-  /** Agent that facilitated (Credentials Provider). */
   facilitatedBy?: AP2AgentId
+  /** When from Credentials Provider secure channel. */
+  signedBy?: AP2AgentId
+  signature?: string
 }
 
-// ─── Settlement (Merchant Payment Processor Agent via x402) ──────────────────
+// ─── Secure message: Settlement (Shopping → Processor → Shopping) ──────────────
 
-/** Step 3: On-chain settlement via Merchant Payment Processor (x402). */
+/** Shopping Agent sends this to Merchant Payment Processor. */
+export interface SettlementRequest {
+  requestId: string
+  from: AP2AgentId
+  intentId: string
+  authorizationId: string
+  amountBtc: string
+  recipientAddress: string
+  /** Proof that Credentials Provider approved (e.g. signature). */
+  authorizationSignature: string
+  timestamp: string
+}
+
+/** Processor returns this to Shopping Agent. Settlement proof (e.g. txid) is the on-chain receipt. */
+export interface SignedSettlementResult {
+  id: string
+  requestId: string
+  intentId: string
+  authorizationId: string
+  status: 'success' | 'failed'
+  txid?: string
+  error?: string
+  amountBtc: string
+  recipientAddress: string
+  signedBy: AP2AgentId
+  /** Processor signature or on-chain proof id. */
+  signature: string
+  protocol: string
+  createdAt: string
+}
+
+// ─── Intent (Shopping Agent internal; not sent to others as-is) ───────────────
+
+export interface PaymentIntent {
+  id: string
+  createdAt: string
+  prompt: string
+  summary: string
+  amountBtc: string
+  recipient: string
+  memo?: string
+  createdBy: AP2AgentId
+  cartMandate?: SignedCartMandate | null
+}
+
+// ─── Settlement (legacy / receipt view) ──────────────────────────────────────
+
 export interface Settlement {
   id: string
   intentId: string
@@ -109,15 +207,12 @@ export interface Settlement {
   error?: string
   amountBtc: string
   recipientAddress: string
-  /** Merchant Payment Processor Agent executes. */
   executedBy: AP2AgentId
-  /** e.g. "x402" */
   protocol?: string
 }
 
 // ─── Receipt (auditable) ────────────────────────────────────────────────────
 
-/** Step 4: Auditable record tying intent → authorization → settlement. */
 export interface Receipt {
   id: string
   createdAt: string
@@ -127,11 +222,10 @@ export interface Receipt {
   summary: string
 }
 
-/** In-memory flow state. */
 export interface AP2FlowState {
   step: Step
   intent: PaymentIntent | null
-  cartMandate: CartMandate | null
+  cartMandate: SignedCartMandate | null
   authorization: Authorization | null
   settlement: Settlement | null
   receipt: Receipt | null

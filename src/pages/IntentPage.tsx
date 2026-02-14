@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFlow } from '@/context/FlowContext'
-import { createId } from '@/lib/id'
-import { AP2_AGENT_IDS } from '@/types/ap2'
-import type { PaymentIntent } from '@/types/ap2'
+import { createIntentFromPrompt } from '@/agents/shopping-agent'
 import styles from './IntentPage.module.css'
 
+/**
+ * User talks to Shopping Agent. Shopping Agent creates an intent (internal);
+ * it will later call Merchant Agent, Credentials Provider, and Processor — each over secure channels.
+ */
 export function IntentPage() {
   const navigate = useNavigate()
   const { setIntent } = useFlow()
@@ -21,16 +23,13 @@ export function IntentPage() {
     const trimmedRecipient = recipient.trim()
     if (!trimmedPrompt || !trimmedRecipient) return
 
-    const intent: PaymentIntent = {
-      id: createId('intent'),
-      createdAt: new Date().toISOString(),
+    const intent = createIntentFromPrompt({
       prompt: trimmedPrompt,
       summary: summary.trim() || trimmedPrompt.slice(0, 80),
       amountBtc: amountBtc.trim() || '0.001',
       recipient: trimmedRecipient,
       memo: memo.trim() || undefined,
-      createdBy: AP2_AGENT_IDS.SHOPPING_AGENT,
-    }
+    })
     setIntent(intent)
     navigate('/cart')
   }
@@ -39,13 +38,11 @@ export function IntentPage() {
     <div className={styles.page}>
       <h1 className={styles.title}>Create payment intent</h1>
       <p className={styles.subtitle}>
-        Describe what you want to buy in plain language. You’ll approve and settle in the next steps.
+        <strong>Shopping Agent</strong> — You talk to the orchestrator. It will then communicate securely with Merchant Agent (cart), Credentials Provider (your wallet approval), and Processor (x402 settlement). It does not hold your credentials or settle payments itself.
       </p>
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        <label className={styles.label}>
-          What do you want to pay for? (prompt)
-        </label>
+        <label className={styles.label}>What do you want to pay for? (prompt)</label>
         <textarea
           className={styles.textarea}
           placeholder="e.g. Buy 2 coffees for Alice at the office, or Pay for API credits"
@@ -54,7 +51,6 @@ export function IntentPage() {
           rows={3}
           required
         />
-
         <label className={styles.label}>Short summary (optional)</label>
         <input
           type="text"
@@ -63,11 +59,8 @@ export function IntentPage() {
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
         />
-
         <div className={styles.row}>
-          <label className={styles.label}>
-            Amount (BTC)
-          </label>
+          <label className={styles.label}>Amount (BTC)</label>
           <input
             type="text"
             className={styles.input}
@@ -77,7 +70,6 @@ export function IntentPage() {
             required
           />
         </div>
-
         <label className={styles.label}>Recipient (address or label)</label>
         <input
           type="text"
@@ -87,7 +79,6 @@ export function IntentPage() {
           onChange={(e) => setRecipient(e.target.value)}
           required
         />
-
         <label className={styles.label}>Memo (optional)</label>
         <input
           type="text"
@@ -96,9 +87,8 @@ export function IntentPage() {
           value={memo}
           onChange={(e) => setMemo(e.target.value)}
         />
-
         <button type="submit" className={styles.submit}>
-          Continue to cart (Merchant Agent)
+          Continue — Shopping Agent will request CartMandate from Merchant Agent
         </button>
       </form>
     </div>

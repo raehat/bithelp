@@ -1,46 +1,69 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFlow } from '@/context/FlowContext'
-import { createId } from '@/lib/id'
-import { AP2_AGENT_IDS } from '@/types/ap2'
+import {
+  shoppingAgentBuildApprovalRequest,
+  credentialsProviderSignApproval,
+} from '@/agents/shopping-agent'
 import type { Authorization } from '@/types/ap2'
 import styles from './AuthorizePage.module.css'
 
+/**
+ * Shopping Agent → Credentials Provider Agent (secure): request payment approval.
+ * Credentials Provider holds the user's wallet; it returns a SIGNED authorization so Shopping Agent can prove approval to the Processor.
+ */
 export function AuthorizePage() {
   const navigate = useNavigate()
-  const { intent, setAuthorization, setStep } = useFlow()
+  const { intent, cartMandate, setAuthorization, setStep } = useFlow()
 
   useEffect(() => {
     if (!intent) {
       setStep('intent')
       navigate('/intent', { replace: true })
+      return
     }
-  }, [intent, navigate, setStep])
+    if (!cartMandate) {
+      setStep('cart')
+      navigate('/cart', { replace: true })
+      return
+    }
+  }, [intent, cartMandate, navigate, setStep])
 
-  if (!intent) return null
+  if (!intent || !cartMandate) return null
+
+  const request = shoppingAgentBuildApprovalRequest(intent.id, cartMandate, intent.recipient)
 
   const approve = () => {
+    const signed = credentialsProviderSignApproval(request, { status: 'approved' })
     const auth: Authorization = {
-      id: createId('auth'),
-      intentId: intent.id,
-      createdAt: new Date().toISOString(),
-      authorizedBy: 'user',
+      id: signed.id,
+      intentId: signed.intentId,
+      createdAt: signed.createdAt,
+      authorizedBy: signed.authorizedBy,
       status: 'approved',
-      facilitatedBy: AP2_AGENT_IDS.CREDENTIALS_PROVIDER_AGENT,
+      facilitatedBy: signed.signedBy,
+      signedBy: signed.signedBy,
+      signature: signed.signature,
     }
     setAuthorization(auth)
     navigate('/settle')
   }
 
   const reject = () => {
-    const auth: Authorization = {
-      id: createId('auth'),
-      intentId: intent.id,
-      createdAt: new Date().toISOString(),
-      authorizedBy: 'user',
+    const signed = credentialsProviderSignApproval(request, {
       status: 'rejected',
       reason: 'Rejected by user',
-      facilitatedBy: AP2_AGENT_IDS.CREDENTIALS_PROVIDER_AGENT,
+    })
+    const auth: Authorization = {
+      id: signed.id,
+      intentId: signed.intentId,
+      createdAt: signed.createdAt,
+      authorizedBy: signed.authorizedBy,
+      status: 'rejected',
+      reason: signed.reason,
+      facilitatedBy: signed.signedBy,
+      signedBy: signed.signedBy,
+      signature: signed.signature,
     }
     setAuthorization(auth)
     navigate('/receipt')
@@ -50,8 +73,17 @@ export function AuthorizePage() {
     <div className={styles.page}>
       <h1 className={styles.title}>Authorize payment</h1>
       <p className={styles.subtitle}>
-        <strong>Credentials Provider Agent</strong> — Review the intent and cart. Approve or reject using your payment credentials (wallet).
+        <strong>Secure communication:</strong> Shopping Agent sent an ApprovalRequest to Credentials Provider Agent. Credentials Provider holds your wallet — it does not create cart or settle. Approve or reject; it will return a SIGNED authorization so only the Processor can be asked to settle.
       </p>
+
+      <div className={styles.comms}>
+        <div className={styles.commRow}>
+          <span className={styles.agent}>Shopping Agent</span>
+          <span className={styles.arrow}>→</span>
+          <span className={styles.agent}>Credentials Provider Agent</span>
+        </div>
+        <p className={styles.commMsg}>ApprovalRequest (intent + cart). Waiting for signed PaymentAuthorization.</p>
+      </div>
 
       <div className={styles.card}>
         <div className={styles.row}>
@@ -77,7 +109,7 @@ export function AuthorizePage() {
           </div>
         )}
         <div className={styles.meta}>
-          Created by {intent.createdBy} · {new Date(intent.createdAt).toLocaleString()}
+          CartMandate from Merchant Agent · Credentials Provider will sign your decision
         </div>
       </div>
 
@@ -86,7 +118,7 @@ export function AuthorizePage() {
           Reject
         </button>
         <button type="button" className={styles.approve} onClick={approve}>
-          Approve & continue to settlement
+          Approve — Credentials Provider signs and returns to Shopping Agent
         </button>
       </div>
     </div>

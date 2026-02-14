@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFlow } from '@/context/FlowContext'
 import { createId } from '@/lib/id'
-import { sendToAddress } from '@/lib/bitcoin'
-import { AP2_AGENT_IDS } from '@/types/ap2'
+import { shoppingAgentRequestSettlement } from '@/agents/shopping-agent'
 import type { Settlement, Receipt } from '@/types/ap2'
 import styles from './SettlePage.module.css'
 
+/**
+ * Shopping Agent → Merchant Payment Processor Agent (secure): request settlement.
+ * Processor does not hold credentials or create cart; it only settles on-chain via x402 and returns a SIGNED result.
+ */
 export function SettlePage() {
   const navigate = useNavigate()
   const { intent, authorization, setSettlement, setReceipt } = useFlow()
@@ -29,22 +32,32 @@ export function SettlePage() {
     setStatus('pending')
     setErrorMessage('')
 
-    try {
-      const result = await sendToAddress(intent.recipient, intent.amountBtc)
-      const settlement: Settlement = {
-        id: createId('settle'),
-        intentId: intent.id,
-        authorizationId: authorization.id,
-        createdAt: new Date().toISOString(),
-        status: 'success',
-        txid: result.txid,
-        amountBtc: result.amountBtc,
-        recipientAddress: result.recipientAddress,
-        executedBy: AP2_AGENT_IDS.MERCHANT_PAYMENT_PROCESSOR_AGENT,
-        protocol: 'x402',
-      }
-      setSettlement(settlement)
+    const authSignature = authorization.signature ?? authorization.proof ?? 'no-signature'
 
+    const result = await shoppingAgentRequestSettlement(
+      intent.id,
+      authorization.id,
+      authSignature,
+      intent.amountBtc,
+      intent.recipient
+    )
+
+    const settlement: Settlement = {
+      id: result.id,
+      intentId: result.intentId,
+      authorizationId: result.authorizationId,
+      createdAt: result.createdAt,
+      status: result.status,
+      txid: result.txid,
+      error: result.error,
+      amountBtc: result.amountBtc,
+      recipientAddress: result.recipientAddress,
+      executedBy: result.signedBy,
+      protocol: result.protocol,
+    }
+    setSettlement(settlement)
+
+    if (result.status === 'success') {
       const receipt: Receipt = {
         id: createId('receipt'),
         createdAt: new Date().toISOString(),
@@ -56,22 +69,9 @@ export function SettlePage() {
       setReceipt(receipt)
       setStatus('success')
       navigate('/receipt')
-    } catch (err) {
+    } else {
       setStatus('error')
-      setErrorMessage(err instanceof Error ? err.message : 'Settlement failed')
-      const settlement: Settlement = {
-        id: createId('settle'),
-        intentId: intent.id,
-        authorizationId: authorization.id,
-        createdAt: new Date().toISOString(),
-        status: 'failed',
-        error: err instanceof Error ? err.message : 'Unknown error',
-        amountBtc: intent.amountBtc,
-        recipientAddress: intent.recipient,
-        executedBy: AP2_AGENT_IDS.MERCHANT_PAYMENT_PROCESSOR_AGENT,
-        protocol: 'x402',
-      }
-      setSettlement(settlement)
+      setErrorMessage(result.error ?? 'Settlement failed')
     }
   }
 
@@ -81,8 +81,17 @@ export function SettlePage() {
     <div className={styles.page}>
       <h1 className={styles.title}>Settlement</h1>
       <p className={styles.subtitle}>
-        <strong>Merchant Payment Processor Agent</strong> — Settles payment on-chain via x402 (local Bitcoin node in this demo; mock by default).
+        <strong>Secure communication:</strong> Shopping Agent sends SettlementRequest (intent + authorization signature) to Merchant Payment Processor Agent. Processor does not hold your credentials or create cart — it only settles on-chain via x402 and returns a signed result.
       </p>
+
+      <div className={styles.comms}>
+        <div className={styles.commRow}>
+          <span className={styles.agent}>Shopping Agent</span>
+          <span className={styles.arrow}>→</span>
+          <span className={styles.agent}>Merchant Payment Processor Agent</span>
+        </div>
+        <p className={styles.commMsg}>SettlementRequest with Credentials Provider signature. Processor will settle via x402 and sign the result.</p>
+      </div>
 
       <div className={styles.card}>
         <div className={styles.row}>
@@ -98,15 +107,15 @@ export function SettlePage() {
           <span className={`${styles.value} ${styles.mono}`}>{intent.recipient}</span>
         </div>
         <div className={styles.row}>
-          <span className={styles.label}>Authorized by</span>
-          <span className={styles.value}>{authorization.authorizedBy}</span>
+          <span className={styles.label}>Authorization</span>
+          <span className={styles.value}>
+            Signed by Credentials Provider {authorization.signature ? '· signature present' : ''}
+          </span>
         </div>
       </div>
 
       {status === 'error' && (
-        <div className={styles.error}>
-          {errorMessage}
-        </div>
+        <div className={styles.error}>{errorMessage}</div>
       )}
 
       <div className={styles.actions}>
@@ -116,7 +125,7 @@ export function SettlePage() {
           onClick={executeSettlement}
           disabled={status === 'pending'}
         >
-          {status === 'pending' ? 'Executing…' : 'Execute settlement'}
+          {status === 'pending' ? 'Shopping Agent requesting settlement from Processor…' : 'Execute — Shopping Agent calls Processor'}
         </button>
       </div>
     </div>

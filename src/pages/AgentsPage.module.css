@@ -69,6 +69,15 @@
   line-height: 1.5;
 }
 
+.interface {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.5;
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--border);
+}
+
 .flow {
   padding: 1.25rem;
   background: rgba(240, 185, 11, 0.06);

@@ -100,7 +100,7 @@ export function IntentPage() {
               required
             />
           </div>
-          <label className={styles.label}>Recipient (Bitcoin address for payment)</label>
+          <label className={styles.label}>Recipient (Bitcoin address for refunds)</label>
           <input
             type="text"
             className={styles.input}

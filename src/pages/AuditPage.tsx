@@ -63,16 +63,6 @@ export function AuditPage() {
           <Link to="/intent" className={styles.cta}>Create intent</Link>
         </div>
       )}
-
-      <div className={styles.pattern}>
-        <h3>Reusable pattern</h3>
-        <ul>
-          <li><strong>Intent</strong> — What to pay (prompt/summary, amount, recipient).</li>
-          <li><strong>Authorization</strong> — Who approved (user/agent), when, approved/rejected.</li>
-          <li><strong>Settlement</strong> — What was executed (txid, amount, recipient, success/fail).</li>
-          <li><strong>Receipt</strong> — Immutable record tying the three for audit.</li>
-        </ul>
-      </div>
     </div>
   )
 }

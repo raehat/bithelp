@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFlow } from '@/context/FlowContext'
 import { createId } from '@/lib/id'
+import { isUnisatAvailable } from '@/lib/bitcoin'
 import { shoppingAgentRequestSettlement } from '@/agents/shopping-agent'
 import type { Settlement, Receipt } from '@/types/ap2'
 import styles from './SettlePage.module.css'
@@ -55,7 +56,7 @@ export function SettlePage() {
       executedBy: result.signedBy,
       protocol: result.protocol,
     }
-    setSettlement(settlement)
+    // setSettlement(settlement)
 
     if (result.status === 'success') {
       const receipt: Receipt = {
@@ -93,6 +94,11 @@ export function SettlePage() {
         <p className={styles.commMsg}>SettlementRequest with Credentials Provider signature. Processor will settle via x402 and sign the result.</p>
       </div>
 
+      {!isUnisatAvailable() && (
+        <div className={styles.error}>
+          Unisat Wallet is required to execute payment. Install the Unisat extension and connect your wallet.
+        </div>
+      )}
       <div className={styles.card}>
         <div className={styles.row}>
           <span className={styles.label}>Intent</span>
@@ -123,7 +129,7 @@ export function SettlePage() {
           type="button"
           className={styles.execute}
           onClick={executeSettlement}
-          disabled={status === 'pending'}
+          disabled={status === 'pending' || !isUnisatAvailable()}
         >
           {status === 'pending' ? 'Shopping Agent requesting settlement from Processor…' : 'Execute — Shopping Agent calls Processor'}
         </button>

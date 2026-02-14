@@ -9,12 +9,5 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    proxy: {
-      '/btc': {
-        target: 'http://127.0.0.1:8332',
-        changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/btc/, ''),
-      },
-    },
   },
 })

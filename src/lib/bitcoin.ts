@@ -1,54 +1,25 @@
 /**
- * Local Bitcoin node client (regtest/signet or mainnet node on localhost).
- * Uses JSON-RPC over HTTP. Vite proxy forwards /btc → 127.0.0.1:8332.
- * For dev without a node, use mock mode (see env or window.__AP2_MOCK_BTC__).
+ * Bitcoin via Unisat Wallet — clean and simple.
+ * No local node or RPC. User signs and sends with Unisat extension.
  */
 
-const RPC_URL = '/btc'
-const MOCK = typeof window !== 'undefined' && (window as unknown as { __AP2_MOCK_BTC__?: boolean }).__AP2_MOCK_BTC__
-
-let requestId = 0
-
-async function rpc<T>(method: string, params: unknown[] = []): Promise<T> {
-  if (MOCK) {
-    return mockRpc(method, params) as Promise<T>
+declare global {
+  interface Window {
+    unisat?: {
+      getAccounts(): Promise<string[]>
+      requestAccounts(): Promise<string[]>
+      sendBitcoin(address: string, amount: number): Promise<string> // amount in satoshis; returns txid
+    }
   }
-  const res = await fetch(RPC_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '1.0',
-      id: ++requestId,
-      method,
-      params,
-    }),
-  })
-  if (!res.ok) throw new Error(`Bitcoin RPC HTTP ${res.status}`)
-  const data = await res.json()
-  if (data.error) throw new Error(data.error.message || 'RPC error')
-  return data.result as T
 }
 
-/** Mock responses for development without a real node. */
-function mockRpc(method: string, params: unknown[]): unknown {
-  switch (method) {
-    case 'getblockcount':
-      return 210000
-    case 'getwalletinfo':
-      return { balance: 0.5, walletname: 'ap2' }
-    case 'getnewaddress':
-      return 'bcrt1qmock' + Math.random().toString(36).slice(2, 12)
-    case 'sendtoaddress': {
-      const txid = 'mock' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
-      return txid
-    }
-    case 'validateaddress': {
-      const [address] = params as [string]
-      return { isvalid: address.length >= 10 }
-    }
-    default:
-      return null
+const BTC_TO_SATS = 100_000_000
+
+function getUnisat(): NonNullable<typeof window.unisat> {
+  if (typeof window === 'undefined' || !window.unisat) {
+    throw new Error('Unisat Wallet not found. Install the Unisat extension to send Bitcoin.')
   }
+  return (window as any).unisat
 }
 
 export interface SendResult {
@@ -57,26 +28,59 @@ export interface SendResult {
   recipientAddress: string
 }
 
-/** Send BTC to address (amount in BTC string). Returns txid. */
+/** Send BTC to address (amount in BTC string). Opens Unisat for user to sign. Returns txid. */
 export async function sendToAddress(recipientAddress: string, amountBtc: string): Promise<SendResult> {
+  
   const amount = parseFloat(amountBtc)
   if (!Number.isFinite(amount) || amount <= 0) throw new Error('Invalid amount')
-  const txid = await rpc<string>('sendtoaddress', [recipientAddress, amount])
+  const unisat = (window as any).unisat
+
+  await unisat.switchNetwork("testnet");
+
+  const satoshis = Math.round(amount * BTC_TO_SATS)
+  try {
+    const txid = await unisat.sendBitcoin(recipientAddress, satoshis)
+  } catch (err) {
+    if (err instanceof Error) {
+      console.log(err.message)
+    } else {
+      console.log("Unknown error:", err)
+    }
+  }  
+
+  const txid = await unisat.sendBitcoin(recipientAddress, satoshis)
   return { txid, amountBtc, recipientAddress }
 }
 
-/** Validate address (optional pre-check). */
+/** Validate address (basic format check). */
 export async function validateAddress(address: string): Promise<boolean> {
-  const result = await rpc<{ isvalid: boolean }>('validateaddress', [address])
-  return result?.isvalid ?? false
+  if (!address || typeof address !== 'string') return false
+  const trimmed = address.trim()
+  return /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/.test(trimmed)
 }
 
-/** Get a new receive address (for demo/display). */
+/** Get current Unisat address (requires prior connection). */
 export async function getNewAddress(): Promise<string> {
-  return rpc<string>('getnewaddress', [])
+  const unisat = getUnisat()
+  const accounts = await unisat.getAccounts()
+  if (!accounts?.length) throw new Error('Unisat not connected. Connect your wallet first.')
+  return accounts[0]
 }
 
-/** Check if we're using mock (no real node). */
+/** Connect Unisat and return the first address (for Credentials Provider / wallet list). */
+export async function createBitcoinWallet(): Promise<{ address: string }> {
+  const unisat = getUnisat()
+  const accounts = await unisat.requestAccounts()
+  if (!accounts?.length) throw new Error('Unisat connection refused or no accounts.')
+  return { address: accounts[0] }
+}
+
+/** Check if Unisat is available (extension installed). */
+export function isUnisatAvailable(): boolean {
+  return typeof window !== 'undefined' && !!window.unisat
+}
+
+/** @deprecated Use isUnisatAvailable. Kept for compatibility. */
 export function isMockBitcoin(): boolean {
-  return !!MOCK
+  return !isUnisatAvailable()
 }

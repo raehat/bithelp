@@ -13,7 +13,7 @@ import styles from './SettlePage.module.css'
  */
 export function SettlePage() {
   const navigate = useNavigate()
-  const { intent, authorization, setSettlement, setReceipt } = useFlow()
+  const { intent, authorization, setReceipt } = useFlow()
   const [status, setStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 

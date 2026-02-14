@@ -31,6 +31,10 @@ export interface AP2Agent {
   role: string
   /** What this agent can do; what it accepts and returns when others communicate with it. */
   interface: string
+  /** Explicit responsibilities (this agent does these). */
+  does: string[]
+  /** Explicit non-responsibilities (this agent must NOT do these). */
+  doesNot: string[]
 }
 
 export const AP2_AGENTS: AP2Agent[] = [
@@ -38,25 +42,52 @@ export const AP2_AGENTS: AP2Agent[] = [
     id: AP2_AGENT_IDS.SHOPPING_AGENT,
     name: 'Shopping Agent',
     role: 'Main orchestrator; handles user requests',
-    interface: 'Receives user prompt → calls Merchant (cart), Credentials Provider (approval), Processor (settlement). Does NOT hold credentials or settle.',
+    interface: 'Receives user prompt → calls Merchant (cart), Credentials Provider (approval), Processor (settlement).',
+    does: [
+      'Receives user prompt and creates intent',
+      'Sends CartRequest to Merchant Agent',
+      'Sends ApprovalRequest to Credentials Provider Agent',
+      'Sends SettlementRequest to Merchant Payment Processor Agent',
+      'Orchestrates flow; does not hold data from other agents long-term',
+    ],
+    doesNot: ['Hold wallets or credentials', 'Create or sign CartMandates', 'Sign payment approvals', 'Execute on-chain settlement'],
   },
   {
     id: AP2_AGENT_IDS.MERCHANT_AGENT,
     name: 'Merchant Agent',
     role: 'Handles product queries; creates signed CartMandates',
-    interface: 'Accepts CartRequest from Shopping Agent. Returns SIGNED CartMandate. Does NOT see credentials or execute payment.',
+    interface: 'Accepts CartRequest from Shopping Agent. Returns SIGNED CartMandate.',
+    does: [
+      'Accepts CartRequest from Shopping Agent',
+      'Builds cart (items, total)',
+      'Signs and returns CartMandate',
+    ],
+    doesNot: ['Hold or see user wallets/credentials', 'Sign payment approvals', 'Execute on-chain settlement'],
   },
   {
     id: AP2_AGENT_IDS.CREDENTIALS_PROVIDER_AGENT,
     name: 'Credentials Provider Agent',
     role: "Holds user's payment credentials (wallets); facilitates payment",
-    interface: 'Accepts ApprovalRequest (intent + cart) from Shopping Agent. Returns SIGNED PaymentAuthorization. Does NOT create cart or settle.',
+    interface: 'Accepts ApprovalRequest (intent + cart) from Shopping Agent. Returns SIGNED PaymentAuthorization.',
+    does: [
+      'Holds user wallets (e.g. Bitcoin addresses)',
+      'Creates new wallets (e.g. Add Bitcoin wallet) and shows address/QR to fund',
+      'Accepts ApprovalRequest from Shopping Agent',
+      'Returns SIGNED PaymentAuthorization (approve/reject)',
+    ],
+    doesNot: ['Create or sign CartMandates', 'Execute on-chain settlement', 'See Merchant or Processor internal data'],
   },
   {
     id: AP2_AGENT_IDS.MERCHANT_PAYMENT_PROCESSOR_AGENT,
     name: 'Merchant Payment Processor Agent',
     role: 'Settles payment on-chain via x402',
-    interface: 'Accepts SettlementRequest (intent + cart + authorization) from Shopping Agent. Returns SIGNED SettlementResult. Does NOT hold credentials.',
+    interface: 'Accepts SettlementRequest (intent + cart + authorization) from Shopping Agent. Returns SIGNED SettlementResult.',
+    does: [
+      'Accepts SettlementRequest with authorization signature from Shopping Agent',
+      'Executes on-chain settlement (e.g. via x402)',
+      'Returns SIGNED SettlementResult (txid or error)',
+    ],
+    doesNot: ['Hold or see user wallets/credentials', 'Create or sign CartMandates', 'Sign payment approvals'],
   },
 ]
 

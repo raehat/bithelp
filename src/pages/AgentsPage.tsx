@@ -21,6 +21,22 @@ export function AgentsPage() {
               <h2 className={styles.name}>{agent.name}</h2>
               <p className={styles.role}>{agent.role}</p>
               <p className={styles.interface}>{agent.interface}</p>
+              <div className={styles.does}>
+                <strong>Does:</strong>
+                <ul>
+                  {agent.does.map((d, j) => (
+                    <li key={j}>{d}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className={styles.doesNot}>
+                <strong>Does NOT:</strong>
+                <ul>
+                  {agent.doesNot.map((d, j) => (
+                    <li key={j}>{d}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </li>
         ))}
@@ -33,7 +49,10 @@ export function AgentsPage() {
         </p>
       </div>
 
-      <Link to="/intent" className={styles.cta}>Start a payment</Link>
+      <div className={styles.ctas}>
+        <Link to="/wallets" className={styles.cta}>Add wallet (Credentials Provider)</Link>
+        <Link to="/intent" className={styles.cta}>Start a payment</Link>
+      </div>
     </div>
   )
 }

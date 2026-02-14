@@ -78,6 +78,38 @@
   border-left: 2px solid var(--border);
 }
 
+.does,
+.doesNot {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.does strong {
+  color: var(--success);
+}
+
+.doesNot strong {
+  color: var(--muted);
+}
+
+.does ul,
+.doesNot ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.doesNot ul {
+  color: var(--muted);
+}
+
+.ctas {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .flow {
   padding: 1.25rem;
   background: rgba(240, 185, 11, 0.06);

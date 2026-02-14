@@ -8,6 +8,7 @@ import { AuthorizePage } from '@/pages/AuthorizePage'
 import { SettlePage } from '@/pages/SettlePage'
 import { ReceiptPage } from '@/pages/ReceiptPage'
 import { AuditPage } from '@/pages/AuditPage'
+import { WalletsPage } from '@/pages/WalletsPage'
 
 function FlowRedirect() {
   const { step } = useFlow()
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/settle" element={<SettlePage />} />
         <Route path="/receipt" element={<ReceiptPage />} />
         <Route path="/audit" element={<AuditPage />} />
+        <Route path="/wallets" element={<WalletsPage />} />
       </Routes>
     </Layout>
   )

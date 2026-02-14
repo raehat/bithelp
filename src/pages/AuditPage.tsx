@@ -1,0 +1,73 @@
+import { useFlow } from '@/context/FlowContext'
+import { Link } from 'react-router-dom'
+import styles from './AuditPage.module.css'
+
+/**
+ * Audit trail: for humans and systems.
+ * In a full implementation, this would list all past receipts (e.g. from API or local store).
+ * Here we show the current flow's receipt if available, and document the pattern.
+ */
+export function AuditPage() {
+  const { intent, authorization, settlement, receipt } = useFlow()
+
+  const hasRecord = intent && authorization
+
+  return (
+    <div className={styles.page}>
+      <h1 className={styles.title}>Audit trail</h1>
+      <p className={styles.subtitle}>
+        Accountability: who authorized what, what was executed, what was delivered.
+        This view is the reusable pattern for audit logs.
+      </p>
+
+      {hasRecord ? (
+        <div className={styles.card}>
+          <div className={styles.auditRow}>
+            <span className={styles.auditStep}>Intent</span>
+            <span className={styles.auditWho}>{intent.createdBy}</span>
+            <span className={styles.auditWhat}>{intent.summary}</span>
+            <span className={styles.auditWhen}>{new Date(intent.createdAt).toLocaleString()}</span>
+          </div>
+          <div className={styles.auditRow}>
+            <span className={styles.auditStep}>Authorization</span>
+            <span className={styles.auditWho}>{authorization.authorizedBy}</span>
+            <span className={styles.auditWhat}>{authorization.status}</span>
+            <span className={styles.auditWhen}>{new Date(authorization.createdAt).toLocaleString()}</span>
+          </div>
+          {settlement && (
+            <div className={styles.auditRow}>
+              <span className={styles.auditStep}>Settlement</span>
+              <span className={styles.auditWho}>{settlement.executedBy}</span>
+              <span className={styles.auditWhat}>
+                {settlement.status} {settlement.txid ? `· ${settlement.txid.slice(0, 16)}…` : ''}
+              </span>
+              <span className={styles.auditWhen}>{new Date(settlement.createdAt).toLocaleString()}</span>
+            </div>
+          )}
+          {receipt && (
+            <div className={styles.receiptSummary}>
+              {receipt.summary}
+            </div>
+          )}
+          <Link to="/receipt" className={styles.receiptLink}>View full receipt →</Link>
+        </div>
+      ) : (
+        <div className={styles.empty}>
+          <p>No payment in this session yet.</p>
+          <p className={styles.hint}>Create an intent, authorize, and settle to see the audit trail here.</p>
+          <Link to="/intent" className={styles.cta}>Create intent</Link>
+        </div>
+      )}
+
+      <div className={styles.pattern}>
+        <h3>Reusable pattern</h3>
+        <ul>
+          <li><strong>Intent</strong> — What to pay (prompt/summary, amount, recipient).</li>
+          <li><strong>Authorization</strong> — Who approved (user/agent), when, approved/rejected.</li>
+          <li><strong>Settlement</strong> — What was executed (txid, amount, recipient, success/fail).</li>
+          <li><strong>Receipt</strong> — Immutable record tying the three for audit.</li>
+        </ul>
+      </div>
+    </div>
+  )
+}

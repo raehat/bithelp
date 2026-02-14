@@ -1,0 +1,106 @@
+.page {
+  animation: fade 0.2s ease;
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.title {
+  font-size: 1.75rem;
+  margin: 0 0 0.5rem;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin: 0 0 2rem;
+  font-size: 0.95rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-of-type {
+  border-bottom: none;
+}
+
+.label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.value {
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.value.mono {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.meta {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.approve,
+.reject {
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.approve {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.approve:hover {
+  opacity: 0.95;
+}
+
+.reject {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.reject:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.approve:active,
+.reject:active {
+  transform: scale(0.98);
+}

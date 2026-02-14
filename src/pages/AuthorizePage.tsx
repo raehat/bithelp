@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFlow } from '@/context/FlowContext'
 import { createId } from '@/lib/id'
+import { AP2_AGENT_IDS } from '@/types/ap2'
 import type { Authorization } from '@/types/ap2'
 import styles from './AuthorizePage.module.css'
 
@@ -25,6 +26,7 @@ export function AuthorizePage() {
       createdAt: new Date().toISOString(),
       authorizedBy: 'user',
       status: 'approved',
+      facilitatedBy: AP2_AGENT_IDS.CREDENTIALS_PROVIDER_AGENT,
     }
     setAuthorization(auth)
     navigate('/settle')
@@ -38,6 +40,7 @@ export function AuthorizePage() {
       authorizedBy: 'user',
       status: 'rejected',
       reason: 'Rejected by user',
+      facilitatedBy: AP2_AGENT_IDS.CREDENTIALS_PROVIDER_AGENT,
     }
     setAuthorization(auth)
     navigate('/receipt')
@@ -47,7 +50,7 @@ export function AuthorizePage() {
     <div className={styles.page}>
       <h1 className={styles.title}>Authorize payment</h1>
       <p className={styles.subtitle}>
-        Review the intent below. You are authorizing this payment from your local Bitcoin node.
+        <strong>Credentials Provider Agent</strong> — Review the intent and cart. Approve or reject using your payment credentials (wallet).
       </p>
 
       <div className={styles.card}>

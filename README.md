@@ -1,13 +1,25 @@
 # AP2 — Agent Payment Protocol
 
-Frontend for a **clean intent → authorization → settlement** flow with **auditable receipts**. Users can "buy anything" with prompts and pay with Bitcoin via a **local node** (no mainnet by default).
+Frontend for the **Agent Payment Protocol** with the **four canonical AP2 components**. Users can "buy anything" with prompts; payment is settled on-chain via x402 (local Bitcoin node in this demo).
+
+## The 4 AP2 components
+
+Every AP2 project has exactly four agents:
+
+| Component | Role |
+|-----------|------|
+| **Shopping Agent** | Main orchestrator; handles user requests |
+| **Merchant Agent** | Handles product queries; creates signed **CartMandates** |
+| **Credentials Provider Agent** | Holds user's payment credentials (wallets); facilitates payment |
+| **Merchant Payment Processor Agent** | Settles payment on-chain via **x402** |
 
 ## Flow
 
-1. **Intent** — User describes what to pay for (prompt), amount in BTC, recipient. Creates an auditable intent record.
-2. **Authorization** — Human (or agent) reviews and approves or rejects. Records who authorized and when.
-3. **Settlement** — System executes the payment against the local Bitcoin node. Records txid and outcome.
-4. **Receipt** — Immutable record tying intent + authorization + settlement for humans and systems.
+1. **Intent** (Shopping Agent) — User describes what to pay for (prompt), amount, recipient.
+2. **Cart** (Merchant Agent) — Returns a signed CartMandate for the request.
+3. **Authorization** (Credentials Provider Agent) — User approves or rejects using payment credentials.
+4. **Settlement** (Merchant Payment Processor Agent) — Executes payment via x402 (local Bitcoin node here; mock by default).
+5. **Receipt** — Auditable record tying intent → cart → authorization → settlement.
 
 ## Run locally
 

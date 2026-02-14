@@ -1,9 +1,10 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
-import type { AP2FlowState, Authorization, PaymentIntent, Receipt, Settlement } from '@/types/ap2'
+import type { AP2FlowState, Authorization, CartMandate, PaymentIntent, Receipt, Settlement } from '@/types/ap2'
 
 const initialState: AP2FlowState = {
   step: 'intent',
   intent: null,
+  cartMandate: null,
   authorization: null,
   settlement: null,
   receipt: null,
@@ -11,6 +12,7 @@ const initialState: AP2FlowState = {
 
 type FlowContextValue = AP2FlowState & {
   setIntent: (intent: PaymentIntent) => void
+  setCartMandate: (cart: CartMandate | null) => void
   setAuthorization: (auth: Authorization) => void
   setSettlement: (s: Settlement) => void
   setReceipt: (r: Receipt) => void
@@ -24,7 +26,11 @@ export function FlowProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AP2FlowState>(initialState)
 
   const setIntent = useCallback((intent: PaymentIntent) => {
-    setState((s) => ({ ...s, intent, step: 'authorization' }))
+    setState((s) => ({ ...s, intent, step: 'cart' }))
+  }, [])
+
+  const setCartMandate = useCallback((cartMandate: CartMandate | null) => {
+    setState((s) => ({ ...s, cartMandate, step: 'authorization' }))
   }, [])
 
   const setAuthorization = useCallback((authorization: Authorization) => {
@@ -51,13 +57,14 @@ export function FlowProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ...state,
       setIntent,
+      setCartMandate,
       setAuthorization,
       setSettlement,
       setReceipt,
       setStep,
       reset,
     }),
-    [state, setIntent, setAuthorization, setSettlement, setReceipt, setStep, reset]
+    [state, setIntent, setCartMandate, setAuthorization, setSettlement, setReceipt, setStep, reset]
   )
 
   return <FlowContext.Provider value={value}>{children}</FlowContext.Provider>

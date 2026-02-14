@@ -4,6 +4,7 @@ import styles from './Layout.module.css'
 
 const STEPS: { path: string; label: string; key: string }[] = [
   { path: '/intent', label: 'Intent', key: 'intent' },
+  { path: '/cart', label: 'Cart', key: 'cart' },
   { path: '/authorize', label: 'Authorize', key: 'authorization' },
   { path: '/settle', label: 'Settle', key: 'settlement' },
   { path: '/receipt', label: 'Receipt', key: 'receipt' },
@@ -36,9 +37,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             )
           })}
-          <Link to="/audit" className={styles.auditLink}>
-            Audit
-          </Link>
+          <Link to="/agents" className={styles.auditLink}>4 Agents</Link>
+          <Link to="/audit" className={styles.auditLink}>Audit</Link>
         </nav>
       </header>
       <main className={styles.main}>{children}</main>

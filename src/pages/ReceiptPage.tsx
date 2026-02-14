@@ -2,7 +2,12 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFlow } from '@/context/FlowContext'
 import { Link } from 'react-router-dom'
+import { AP2_AGENTS } from '@/types/ap2'
 import styles from './ReceiptPage.module.css'
+
+function agentName(id: string): string {
+  return AP2_AGENTS.find((a) => a.id === id)?.name ?? id
+}
 
 export function ReceiptPage() {
   const navigate = useNavigate()
@@ -23,7 +28,7 @@ export function ReceiptPage() {
     <div className={styles.page}>
       <h1 className={styles.title}>Receipt</h1>
       <p className={styles.subtitle}>
-        Auditable record: intent → authorization → settlement.
+        Auditable record: Intent (Shopping) → CartMandate (Merchant) → Authorization (Credentials Provider) → Settlement (Processor via x402).
       </p>
 
       <div className={styles.card}>
@@ -41,7 +46,7 @@ export function ReceiptPage() {
             <span className={styles.label}>Amount · Recipient</span>
             <span className={`${styles.value} ${styles.mono}`}>{intent.amountBtc} BTC → {intent.recipient}</span>
           </div>
-          <div className={styles.meta}>Created by {intent.createdBy} · {new Date(intent.createdAt).toLocaleString()}</div>
+          <div className={styles.meta}>Created by {agentName(intent.createdBy)} · {new Date(intent.createdAt).toLocaleString()}</div>
         </section>
 
         <section className={styles.section}>
@@ -85,7 +90,7 @@ export function ReceiptPage() {
                 <span className={styles.value}>{settlement.error}</span>
               </div>
             )}
-            <div className={styles.meta}>Executed by {settlement.executedBy} · {new Date(settlement.createdAt).toLocaleString()}</div>
+            <div className={styles.meta}>Executed by {agentName(settlement.executedBy)} {settlement.protocol ? `via ${settlement.protocol}` : ''} · {new Date(settlement.createdAt).toLocaleString()}</div>
           </section>
         )}
 

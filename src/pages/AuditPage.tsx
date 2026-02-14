@@ -1,6 +1,11 @@
 import { useFlow } from '@/context/FlowContext'
 import { Link } from 'react-router-dom'
+import { AP2_AGENTS } from '@/types/ap2'
 import styles from './AuditPage.module.css'
+
+function agentName(id: string): string {
+  return AP2_AGENTS.find((a) => a.id === id)?.name ?? id
+}
 
 /**
  * Audit trail: for humans and systems.
@@ -24,7 +29,7 @@ export function AuditPage() {
         <div className={styles.card}>
           <div className={styles.auditRow}>
             <span className={styles.auditStep}>Intent</span>
-            <span className={styles.auditWho}>{intent.createdBy}</span>
+            <span className={styles.auditWho}>{agentName(intent.createdBy)}</span>
             <span className={styles.auditWhat}>{intent.summary}</span>
             <span className={styles.auditWhen}>{new Date(intent.createdAt).toLocaleString()}</span>
           </div>
@@ -37,7 +42,7 @@ export function AuditPage() {
           {settlement && (
             <div className={styles.auditRow}>
               <span className={styles.auditStep}>Settlement</span>
-              <span className={styles.auditWho}>{settlement.executedBy}</span>
+              <span className={styles.auditWho}>{agentName(settlement.executedBy)}</span>
               <span className={styles.auditWhat}>
                 {settlement.status} {settlement.txid ? `· ${settlement.txid.slice(0, 16)}…` : ''}
               </span>

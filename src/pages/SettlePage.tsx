@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useFlow } from '@/context/FlowContext'
 import { createId } from '@/lib/id'
 import { sendToAddress } from '@/lib/bitcoin'
+import { AP2_AGENT_IDS } from '@/types/ap2'
 import type { Settlement, Receipt } from '@/types/ap2'
 import styles from './SettlePage.module.css'
 
@@ -39,7 +40,8 @@ export function SettlePage() {
         txid: result.txid,
         amountBtc: result.amountBtc,
         recipientAddress: result.recipientAddress,
-        executedBy: 'system',
+        executedBy: AP2_AGENT_IDS.MERCHANT_PAYMENT_PROCESSOR_AGENT,
+        protocol: 'x402',
       }
       setSettlement(settlement)
 
@@ -66,7 +68,8 @@ export function SettlePage() {
         error: err instanceof Error ? err.message : 'Unknown error',
         amountBtc: intent.amountBtc,
         recipientAddress: intent.recipient,
-        executedBy: 'system',
+        executedBy: AP2_AGENT_IDS.MERCHANT_PAYMENT_PROCESSOR_AGENT,
+        protocol: 'x402',
       }
       setSettlement(settlement)
     }
@@ -78,7 +81,7 @@ export function SettlePage() {
     <div className={styles.page}>
       <h1 className={styles.title}>Settlement</h1>
       <p className={styles.subtitle}>
-        Execute the approved payment using your local Bitcoin node. No real network by default (mock mode).
+        <strong>Merchant Payment Processor Agent</strong> — Settles payment on-chain via x402 (local Bitcoin node in this demo; mock by default).
       </p>
 
       <div className={styles.card}>

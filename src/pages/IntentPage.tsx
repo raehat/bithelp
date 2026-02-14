@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFlow } from '@/context/FlowContext'
 import { createId } from '@/lib/id'
+import { AP2_AGENT_IDS } from '@/types/ap2'
 import type { PaymentIntent } from '@/types/ap2'
 import styles from './IntentPage.module.css'
 
@@ -28,10 +29,10 @@ export function IntentPage() {
       amountBtc: amountBtc.trim() || '0.001',
       recipient: trimmedRecipient,
       memo: memo.trim() || undefined,
-      createdBy: 'user',
+      createdBy: AP2_AGENT_IDS.SHOPPING_AGENT,
     }
     setIntent(intent)
-    navigate('/authorize')
+    navigate('/cart')
   }
 
   return (
@@ -97,7 +98,7 @@ export function IntentPage() {
         />
 
         <button type="submit" className={styles.submit}>
-          Continue to authorization
+          Continue to cart (Merchant Agent)
         </button>
       </form>
     </div>

@@ -46,6 +46,7 @@ export async function settle(request: SettlementRequest): Promise<SignedSettleme
     }
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Settlement failed'
+    console.log(errorMessage)
     const payloadToSign = JSON.stringify({
       id,
       requestId: request.requestId,

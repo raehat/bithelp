@@ -1,4 +1,4 @@
-# BitHelp, A Bitcoin enabled credential provider for Agent Payment Protocol
+# BitHelp, A Bitcoin enabled credential provider and merchant payment processor agent for Agent Payment Protocol
 
 BitHelp is a Bitcoin-enabled credential provider for the Agent Payment Protocol. We enable smooth Bitcoin payments over x402 using browser-based wallets, instead of handling private keys ourselves.
 

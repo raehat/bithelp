@@ -38,15 +38,6 @@ export async function sendToAddress(recipientAddress: string, amountBtc: string)
   await unisat.switchNetwork("testnet");
 
   const satoshis = Math.round(amount * BTC_TO_SATS)
-  try {
-    const txid = await unisat.sendBitcoin(recipientAddress, satoshis)
-  } catch (err) {
-    if (err instanceof Error) {
-      console.log(err.message)
-    } else {
-      console.log("Unknown error:", err)
-    }
-  }  
 
   const txid = await unisat.sendBitcoin(recipientAddress, satoshis)
   return { txid, amountBtc, recipientAddress }
